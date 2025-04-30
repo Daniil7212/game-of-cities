@@ -52,11 +52,12 @@ def start(message):
 @bot.message_handler(commands=['resign'])
 def resign(message):
     user_name = message.from_user.username
-    bot.send_message(opponent[user_name], "Ваш соперник сдался. Поздравляем, вы выиграли!")
 
     del games[players[user_name]]
     del players[user_name]
     try:
+        bot.send_message(opponent[user_name], "Ваш соперник сдался. Поздравляем, вы выиграли!")
+
         del players[opponent[user_name]]
         del opponent[opponent[user_name]]
         del opponent[user_name]
