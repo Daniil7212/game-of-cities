@@ -90,7 +90,8 @@ def playing(message):
 
     if user_name == games[game_id]["first_player_name"] == turn:
         if city[0] != games[game_id]["last_char"] and len(games[game_id]["cities"]) != 0:
-            bot.send_message(message.chat.id, f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
+            bot.send_message(message.chat.id,
+                             f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
         elif city in games[game_id]["cities"]:
             bot.send_message(message.chat.id, f"Этот город уже был")
         elif not is_city_exists(city):
@@ -104,7 +105,8 @@ def playing(message):
 
     elif user_name == games[game_id]["second_player_name"] == turn:
         if city[0] != games[game_id]["last_char"] and len(games[game_id]["cities"]) != 0:
-            bot.send_message(message.chat.id, f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
+            bot.send_message(message.chat.id,
+                             f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
         elif city in games[game_id]["cities"]:
             bot.send_message(message.chat.id, f"Этот город уже был")
         elif not is_city_exists(city):
