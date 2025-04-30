@@ -9,6 +9,7 @@ client = Mistral(api_key=api_key)
 
 games = {}
 players = {}
+opponent = {}
 
 
 def last_char(city):
@@ -48,10 +49,26 @@ def start(message):
                     """)
 
 
+@bot.message_handler(commands=['resign'])
+def resign(message):
+    user_name = message.from_user.username
+    bot.send_message(opponent[user_name], "Ваш соперник сдался. Поздравляем, вы выиграли!")
+
+    del games[players[user_name]]
+    del players[user_name]
+    try:
+        del players[opponent[user_name]]
+        del opponent[opponent[user_name]]
+        del opponent[user_name]
+    except KeyError:
+        pass
+
+
 @bot.message_handler(commands=['play'])
 def play(message):
     game_id = str(random.randint(10000, 99999))
     bot.send_message(message.chat.id, f"Игра создана")
+    bot.send_message(message.chat.id, f"Если захотите сдаться или выйти из игры напишите '/resign'")
     bot.send_message(message.chat.id, f"ID игры: {game_id}")
     players[message.from_user.username] = game_id
     games[game_id] = {
@@ -77,16 +94,23 @@ def join(message):
     games[game_id]["second_player_name"] = message.from_user.username
     games[game_id]["turn"] = message.from_user.username
     players[message.from_user.username] = game_id
+    opponent[message.from_user.username] = games[game_id]["first_player_name"]
+    opponent[games[game_id]["first_player_name"]] = message.from_user.username
 
+    bot.send_message(message.chat.id, f"Игра найдена")
+    bot.send_message(message.chat.id, f"Если захотите сдаться или выйти из игры напишите '/resign'")
     bot.send_message(message.chat.id, "Вы начинаете")
 
 
 @bot.message_handler(content_types=['text'])
 def playing(message):
-    user_name = message.from_user.username
-    game_id = players[user_name]
-    turn = games[game_id]["turn"]
-    city = message.text.lower()
+    try:
+        user_name = message.from_user.username
+        game_id = players[user_name]
+        turn = games[game_id]["turn"]
+        city = message.text.lower()
+    except KeyError:
+        return
 
     if user_name == games[game_id]["first_player_name"] == turn:
         if city[0] != games[game_id]["last_char"] and len(games[game_id]["cities"]) != 0:
