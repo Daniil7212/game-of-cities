@@ -53,16 +53,17 @@ def start(message):
 def resign(message):
     user_name = message.from_user.username
 
-    del games[players[user_name]]
-    del players[user_name]
     try:
-        bot.send_message(opponent[user_name], "Ваш соперник сдался. Поздравляем, вы выиграли!")
+        bot.send_message(opponent[user_name]["id"], "Ваш соперник сдался. Поздравляем, вы выиграли!")
 
-        del players[opponent[user_name]]
-        del opponent[opponent[user_name]]
-        del opponent[user_name]
+        del players[opponent[user_name]["name"]]
+        del opponent[opponent[user_name]["name"]]
+        del opponent[user_name]["name"]
     except KeyError:
         pass
+
+    del games[players[user_name]]
+    del players[user_name]
 
 
 @bot.message_handler(commands=['play'])
@@ -95,8 +96,10 @@ def join(message):
     games[game_id]["second_player_name"] = message.from_user.username
     games[game_id]["turn"] = message.from_user.username
     players[message.from_user.username] = game_id
-    opponent[message.from_user.username] = games[game_id]["first_player_name"]
-    opponent[games[game_id]["first_player_name"]] = message.from_user.username
+    opponent[message.from_user.username]["name"] = games[game_id]["first_player_name"]
+    opponent[games[game_id]["first_player_name"]]["name"] = message.from_user.username
+    opponent[message.from_user.username]["id"] = games[game_id]["first_player_id"]
+    opponent[games[game_id]["first_player_name"]]["id"] = message.from_user.id
 
     bot.send_message(message.chat.id, f"Игра найдена")
     bot.send_message(message.chat.id, f"Если захотите сдаться или выйти из игры напишите '/resign'")
