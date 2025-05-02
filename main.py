@@ -2,10 +2,20 @@ import telebot
 import config
 import random
 from mistralai import Mistral
+import codecs
 
 bot = telebot.TeleBot(config.TELEGRAM_BOT_API)
 api_key = config.MISTRAL_AI_API
 client = Mistral(api_key=api_key)
+
+file = codecs.open("cities.txt", "r", "utf_8_sig")
+cities = []
+while True:
+    c = file.readline()
+    if not c:
+        break
+    cities.append(c[:-2])
+file.close()
 
 games = {}
 players = {}
@@ -20,23 +30,17 @@ def last_char(city):
 
 
 def is_city_exists(city_name):
-    messages = [
-        {
-            "role": "user",
-            "content": f"Существует ли город '{city_name}'? Ответь 'да' или 'нет'. Не используй символ '.'"
-        }
-    ]
-
-    chat_response = client.chat.complete(
-        model="ministral-8b-latest",
-        messages=messages
-    )
-
-    print(chat_response.choices[0].message.content.lower())
-    if chat_response.choices[0].message.content.lower() == "да":
-        return True
-    else:
-        return False
+    l = 0
+    r = len(cities)
+    while r > l:
+        m = (r - l) / 2
+        if cities[m] == city_name:
+            return True
+        elif cities[m] < city_name:
+            l = m + 1
+        else:
+            r = m
+    return False
 
 
 @bot.message_handler(commands=['start'])
