@@ -30,17 +30,11 @@ def last_char(city):
 
 
 def is_city_exists(city_name):
-    l = 0
-    r = len(cities)
-    while r > l:
-        m = (r - l) / 2
-        if cities[m] == city_name:
-            return True
-        elif cities[m] < city_name:
-            l = m + 1
-        else:
-            r = m
-    return False
+    try:
+        i = cities.index(city_name)
+        return True
+    except ValueError:
+        return False
 
 
 @bot.message_handler(commands=['start'])
