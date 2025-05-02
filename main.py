@@ -23,7 +23,7 @@ opponent = {}
 
 
 def last_char(city):
-    if city[-1] in ['ь', 'ъ', 'ы', 'й']:
+    if city[-1] in ['ь', 'ъ', 'ы']:
         return last_char(city[:-1])
     else:
         return city[-1]
