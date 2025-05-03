@@ -37,6 +37,26 @@ def is_city_exists(city_name):
         return False
 
 
+def is_city_ai(city_name):
+    messages = [
+        {
+            "role": "user",
+            "content": f"Существует ли город '{city_name}'? Ответь лишь 'да' или 'нет'"
+        }
+    ]
+
+    chat_response = client.chat.complete(
+        model="mistral-large-latest",
+        messages=messages
+    )
+
+    print(chat_response.choices[0].message.content.lower())
+    if chat_response.choices[0].message.content.lower() == "да":
+        return True
+    else:
+        return False
+
+
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id,
@@ -102,6 +122,7 @@ def join(message):
     bot.send_message(message.chat.id, f"Игра найдена")
     bot.send_message(message.chat.id, f"Если захотите сдаться или выйти из игры напишите '/resign'")
     bot.send_message(message.chat.id, "Вы начинаете")
+    bot.send_message(opponent[message.from_user.username]["id"], "Второй игрок присоединился. Он начинает.")
 
 
 @bot.message_handler(content_types=['text'])
@@ -120,8 +141,12 @@ def playing(message):
                              f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
         elif city in games[game_id]["cities"]:
             bot.send_message(message.chat.id, f"Этот город уже был")
+            bot.send_message(opponent[message.from_user.username]["id"], f"Соперник назвал '{city}', но этот город уже был")
         elif not is_city_exists(city):
             bot.send_message(message.chat.id, f"Этого города не существует")
+            bot.send_message(opponent[message.from_user.username]["id"],
+                             f"Соперник назвал '{city}', но этого города не существует")
+            bot.send_message(config.MY_CHAT_ID, f"!!!Был назван и не засчитан город '{city}'")
         else:
             games[game_id]["cities"].append(city)
             bot.send_message(games[game_id]["second_player_id"], f"Оппонент: {city.capitalize()}")
@@ -135,8 +160,13 @@ def playing(message):
                              f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
         elif city in games[game_id]["cities"]:
             bot.send_message(message.chat.id, f"Этот город уже был")
+            bot.send_message(opponent[message.from_user.username]["id"],
+                             f"Соперник назвал '{city}', но этот город уже был")
         elif not is_city_exists(city):
             bot.send_message(message.chat.id, f"Этого города не существует")
+            bot.send_message(opponent[message.from_user.username]["id"],
+                             f"Соперник назвал '{city}', но этого города не существует")
+            bot.send_message(config.MY_CHAT_ID, f"!!!Был назван и не засчитан город '{city}'")
         else:
             games[game_id]["cities"].append(city)
             bot.send_message(games[game_id]["first_player_id"], f"Оппонент: {city.capitalize()}")
