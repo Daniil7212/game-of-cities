@@ -14,7 +14,7 @@ while True:
     c = file.readline()
     if not c:
         break
-    cities.append(c[:-2])
+    cities.append(c[:-2].lower())
 file.close()
 
 games = {}
@@ -31,29 +31,32 @@ def last_char(city):
 
 def is_city_exists(city_name):
     try:
-        i = cities.index(city_name)
+        cities.index(city_name)
         return True
     except ValueError:
         return False
 
 
 def is_city_ai(city_name):
-    messages = [
-        {
-            "role": "user",
-            "content": f"Существует ли город '{city_name}'? Ответь лишь 'да' или 'нет'"
-        }
-    ]
+    try:
+        messages = [
+            {
+                "role": "user",
+                "content": f"Существует ли город '{city_name}'? Ответь лишь 'да' или 'нет'"
+            }
+        ]
 
-    chat_response = client.chat.complete(
-        model="mistral-large-latest",
-        messages=messages
-    )
+        chat_response = client.chat.complete(
+            model="mistral-large-latest",
+            messages=messages
+        )
 
-    print(chat_response.choices[0].message.content.lower())
-    if chat_response.choices[0].message.content.lower() == "да":
-        return True
-    else:
+        print(chat_response.choices[0].message.content.lower())
+        if chat_response.choices[0].message.content.lower() == "да":
+            return True
+        else:
+            return False
+    except:
         return False
 
 
@@ -105,7 +108,7 @@ def join(message):
     if len(message.text.split()) != 2:
         bot.send_message(message.chat.id, "Укажите ID игры: `/join [ID_игры]`")
 
-    game_id = message.text.split()[1]
+    game_id = str(message.text.split()[1])
 
     if game_id not in games:
         bot.send_message(message.chat.id, "Игра не найдена")
@@ -114,7 +117,9 @@ def join(message):
     games[game_id]["second_player_name"] = message.from_user.username
     games[game_id]["turn"] = message.from_user.username
     players[message.from_user.username] = game_id
+    opponent[message.from_user.username] = {}
     opponent[message.from_user.username]["name"] = games[game_id]["first_player_name"]
+    opponent[games[game_id]["first_player_name"]] = {}
     opponent[games[game_id]["first_player_name"]]["name"] = message.from_user.username
     opponent[message.from_user.username]["id"] = games[game_id]["first_player_id"]
     opponent[games[game_id]["first_player_name"]]["id"] = message.from_user.id
@@ -135,26 +140,9 @@ def playing(message):
     except KeyError:
         return
 
-    if user_name == games[game_id]["first_player_name"] == turn:
-        if city[0] != games[game_id]["last_char"] and len(games[game_id]["cities"]) != 0:
-            bot.send_message(message.chat.id,
-                             f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
-        elif city in games[game_id]["cities"]:
-            bot.send_message(message.chat.id, f"Этот город уже был")
-            bot.send_message(opponent[message.from_user.username]["id"], f"Соперник назвал '{city}', но этот город уже был")
-        elif not is_city_exists(city):
-            bot.send_message(message.chat.id, f"Этого города не существует")
-            bot.send_message(opponent[message.from_user.username]["id"],
-                             f"Соперник назвал '{city}', но этого города не существует")
-            bot.send_message(config.MY_CHAT_ID, f"!!!Был назван и не засчитан город '{city}'")
-        else:
-            games[game_id]["cities"].append(city)
-            bot.send_message(games[game_id]["second_player_id"], f"Оппонент: {city.capitalize()}")
-            games[game_id]["last_char"] = last_char(city)
-            bot.send_message(games[game_id]["second_player_id"], f"Вам на {games[game_id]["last_char"].upper()}")
-            games[game_id]["turn"] = games[game_id]["second_player_name"]
-
-    elif user_name == games[game_id]["second_player_name"] == turn:
+    if turn != user_name:
+        bot.send_message(message.chat.id, "Сейчас не ваш ход!")
+    else:
         if city[0] != games[game_id]["last_char"] and len(games[game_id]["cities"]) != 0:
             bot.send_message(message.chat.id,
                              f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
@@ -162,20 +150,18 @@ def playing(message):
             bot.send_message(message.chat.id, f"Этот город уже был")
             bot.send_message(opponent[message.from_user.username]["id"],
                              f"Соперник назвал '{city}', но этот город уже был")
-        elif not is_city_exists(city):
+        elif not (is_city_exists(city) or is_city_ai(city)):
             bot.send_message(message.chat.id, f"Этого города не существует")
             bot.send_message(opponent[message.from_user.username]["id"],
                              f"Соперник назвал '{city}', но этого города не существует")
-            bot.send_message(config.MY_CHAT_ID, f"!!!Был назван и не засчитан город '{city}'")
+            bot.send_message(config.MY_CHAT_ID, f"!!!Был назван и не засчитан город '{city}'!!!")
         else:
             games[game_id]["cities"].append(city)
-            bot.send_message(games[game_id]["first_player_id"], f"Оппонент: {city.capitalize()}")
+            bot.send_message(opponent[message.from_user.username]["id"], f"Оппонент: {city.capitalize()}")
             games[game_id]["last_char"] = last_char(city)
-            bot.send_message(games[game_id]["first_player_id"], f"Вам на {games[game_id]["last_char"].upper()}")
-            games[game_id]["turn"] = games[game_id]["first_player_name"]
-
-    else:
-        bot.send_message(message.chat.id, "Сейчас не ваш ход!")
+            bot.send_message(opponent[message.from_user.username]["id"],
+                             f"Вам на {games[game_id]["last_char"].upper()}")
+            games[game_id]["turn"] = opponent[message.from_user.username]["name"]
 
 
 bot.polling(none_stop=True)
