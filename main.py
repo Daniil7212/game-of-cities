@@ -20,6 +20,7 @@ file.close()
 games = {}
 players = {}
 opponent = {}
+answers = ['Такой город действительно есть', 'Ок', 'Хорошо', 'И вправду', 'Хороший выбор' 'Very good']
 
 
 def last_char(city):
@@ -73,7 +74,7 @@ def start(message):
 @bot.message_handler(commands=['resign'])
 def resign(message):
     user_name = message.from_user.username
-
+    bot.send_message(message.chat.id, "Ок, вы проиграли")
     try:
         bot.send_message(opponent[user_name]["id"], "Ваш соперник сдался. Поздравляем, вы выиграли!")
 
@@ -156,6 +157,7 @@ def playing(message):
                              f"Соперник назвал '{city}', но этого города не существует")
             bot.send_message(config.MY_CHAT_ID, f"!!!Был назван и не засчитан город '{city}'!!!")
         else:
+            bot.send_message(message.chat.id, random.choice(answers))
             games[game_id]["cities"].append(city)
             bot.send_message(opponent[message.from_user.username]["id"], f"Оппонент: {city.capitalize()}")
             games[game_id]["last_char"] = last_char(city)
