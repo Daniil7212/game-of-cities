@@ -3,6 +3,7 @@ import config
 import random
 from mistralai import Mistral
 import codecs
+from spellchecker import SpellChecker
 
 bot = telebot.TeleBot(config.TELEGRAM_BOT_API)
 api_key = config.MISTRAL_AI_API
@@ -39,12 +40,12 @@ def is_city_exists(city_name):
         return False
 
 
-def is_city_ai(city_name):
+def correct_city_ai(city_name):
     try:
         messages = [
             {
                 "role": "user",
-                "content": f"Существует ли город '{city_name}'? Ответь лишь 'да' или 'нет'"
+                "content": f"Если '{city_name}' это город, то если он написан неправильно напиши правильно. Отправь только итоговый город без лишних знаков."
             }
         ]
 
@@ -53,12 +54,9 @@ def is_city_ai(city_name):
             messages=messages
         )
 
-        if chat_response.choices[0].message.content.lower() == "да":
-            return True
-        else:
-            return False
+        return chat_response.choices[0].message.content
     except:
-        return False
+        return "error"
 
 
 @bot.message_handler(commands=['start'])
@@ -186,6 +184,8 @@ def playing(message):
         now = group[turn]
     except KeyError:
         return
+
+    city = correct_city_ai(city)
 
     if now != user_name:
         bot.send_message(message.chat.id, "Сейчас не ваш ход!")
