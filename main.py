@@ -25,10 +25,10 @@ answers = ['Такой город действительно есть', 'Ок', 
 
 
 def last_char(city):
-    if city[-1] in ['ь', 'ъ', 'ы']:
-        return last_char(city[:-1])
+    if city[-1] in ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'э', 'ю', 'я']:
+        return city[:-1]
     else:
-        return city[-1]
+        return last_char(city[:-1])
 
 
 def is_city_exists(city_name):
@@ -53,7 +53,6 @@ def is_city_ai(city_name):
             messages=messages
         )
 
-        print(chat_response.choices[0].message.content.lower())
         if chat_response.choices[0].message.content.lower() == "да":
             return True
         else:
@@ -74,7 +73,9 @@ def start(message):
 
 @bot.message_handler(commands=['create'])
 def create(message):
-    game_id = str(random.randint(10000, 99999))
+    game_id = str(random.randint(1000, 9999))
+    while game_id in games:
+        game_id = str(random.randint(10000, 99999))
 
     bot.send_message(message.chat.id, f"Игра создана")
     bot.send_message(message.chat.id, f"ID игры: {game_id}")
@@ -112,6 +113,13 @@ def leave(message):
 
     else:
         bot.send_message(message.from_user.id, "Хорошо, мы удалили вас из игры")
+
+        group = games[players[message.from_user.username]]["players"]
+        if group.index(message.from_user.username) == len(group) - 1:
+            games[players[message.from_user.username]]["turn"] = 0
+            bot.send_message(tele_id[group[0]], "Ваш ход")
+            bot.send_message(tele_id[group[0]], f"Вам на {games[players[message.from_user.username]]["last_char"].upper()}")
+
         del tele_id[message.from_user.username]
         games[players[message.from_user.username]]["players"].remove(message.from_user.username)
 
@@ -125,11 +133,17 @@ def leave(message):
 def join(message):
     if len(message.text.split()) != 2:
         bot.send_message(message.chat.id, "Укажите ID игры: `/join ID_игры`")
+        return
 
     game_id = str(message.text.split()[1])
 
     if game_id not in games:
         bot.send_message(message.chat.id, "Игра не найдена")
+        return
+
+    if games[game_id]["last_char"] is None:
+        bot.send_message(message.chat.id, "Игра уже началась, вы не можете к ней присоединиться")
+        return
 
     bot.send_message(message.chat.id, f"Игра найдена")
     bot.send_message(message.chat.id, f"Если вы захотите выйти из игры до или после её начала, напишите '/leave'")
@@ -187,7 +201,7 @@ def playing(message):
                 if i != now:
                     bot.send_message(tele_id[i], f"Соперник назвал '{city}', но этот город уже был")
 
-        elif not (is_city_exists(city) or is_city_ai(city)):
+        elif not is_city_exists(city):
             bot.send_message(message.chat.id, f"Этого города не существует")
 
             for i in games[game_id]["players"]:
