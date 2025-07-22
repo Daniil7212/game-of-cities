@@ -3,12 +3,13 @@ import config
 import random
 from mistralai import Mistral
 import codecs
-from spellchecker import SpellChecker
 
+# API
 bot = telebot.TeleBot(config.TELEGRAM_BOT_API)
 api_key = config.MISTRAL_AI_API
 client = Mistral(api_key=api_key)
 
+# Список существующих городов
 file = codecs.open("cities.txt", "r", "utf_8_sig")
 cities = []
 while True:
@@ -18,13 +19,16 @@ while True:
     cities.append(c[:-2].lower())
 file.close()
 
+# Data
 games = {}
 players = {}
 opponent = {}
 tele_id = {}
-answers = ['Такой город действительно есть', 'Ок', 'Хорошо', 'И вправду', 'Хороший выбор' 'Very good']
+answers = ['Такой город действительно есть', 'Ок', 'Хорошо', 'И вправду', 'Хороший выбор', 'Very good']
+is_time_game = False
 
 
+# На какую букву ходить следующим
 def last_char(city):
     if city[-1] in ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'э', 'ю', 'я']:
         return city[:-1]
@@ -32,14 +36,40 @@ def last_char(city):
         return last_char(city[:-1])
 
 
+# Проверка существует ли такой город
 def is_city_exists(city_name):
-    try:
-        cities.index(city_name)
-        return True
-    except ValueError:
-        return False
+    low = 0
+    high = len(cities) - 1
+
+    while low <= high:
+        mid = (low + high) // 2
+        guess = cities[mid]
+        if guess == city_name:
+            return True
+        if guess > city_name:
+            high = mid - 1
+        else:
+            low = mid + 1
+    return False
 
 
+def is_city_new(cities_list, city_name):
+    low = 0
+    high = len(cities_list) - 1
+
+    while low <= high:
+        mid = (low + high) // 2
+        guess = cities_list[mid]
+        if guess == city_name:
+            return False
+        if guess > city_name:
+            high = mid - 1
+        else:
+            low = mid + 1
+    return True
+
+
+# Проверка правильно ли написан с помощью нейросети
 def correct_city_ai(city_name):
     try:
         messages = [
@@ -59,6 +89,7 @@ def correct_city_ai(city_name):
         return "error"
 
 
+# Команда запуска бота
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id,
@@ -69,11 +100,12 @@ def start(message):
                     """)
 
 
+# Команда создания игры
 @bot.message_handler(commands=['create'])
 def create(message):
     game_id = str(random.randint(1000, 9999))
     while game_id in games:
-        game_id = str(random.randint(10000, 99999))
+        game_id = str(random.randint(1000, 9999))
 
     bot.send_message(message.chat.id, f"Игра создана")
     bot.send_message(message.chat.id, f"ID игры: {game_id}")
@@ -86,10 +118,18 @@ def create(message):
         "cities": [],
         "players": [message.from_user.username, ],
         "turn": None,
-        "last_char": None
+        "last_char": None,
+        "is_times": False
     }
 
+    try:
+        if message.text.split()[-1] == "time":
+            games[game_id]["is_times"] = True
+    except:
+        pass
 
+
+# Команда выхода из игры
 @bot.message_handler(commands=['leave'])
 def leave(message):
     if len(games[players[message.from_user.username]]["players"]) <= 2:
@@ -127,6 +167,7 @@ def leave(message):
         del players[message.from_user.username]
 
 
+# Команда добавления в игру
 @bot.message_handler(commands=['join'])
 def join(message):
     if len(message.text.split()) != 2:
@@ -148,11 +189,15 @@ def join(message):
     for i in games[game_id]["players"]:
         bot.send_message(tele_id[i], f"К вам присоединился новый игрок: {message.from_user.username}")
 
+    if games[game_id]["is_times"]:
+        bot.send_message(message.chat.id, f"Эта игра на время")
+
     games[game_id]["players"].append(message.from_user.username)
     players[message.from_user.username] = game_id
     tele_id[message.from_user.username] = message.from_user.id
 
 
+# Команда начала игры
 @bot.message_handler(commands=['play'])
 def play(message):
     game_id = players[message.from_user.username]
@@ -173,6 +218,7 @@ def play(message):
             bot.send_message(tele_id[i], f"Начинает: {beginner}")
 
 
+# Процесс игры
 @bot.message_handler(content_types=['text'])
 def playing(message):
     try:
@@ -180,21 +226,18 @@ def playing(message):
         game_id = players[user_name]
         turn = games[game_id]["turn"]
         city = message.text.lower()
+        city.replace(' ', '-')
         group = games[game_id]["players"]
         now = group[turn]
     except KeyError:
         return
 
-    city = correct_city_ai(city)
-
-    if now != user_name:
-        bot.send_message(message.chat.id, "Сейчас не ваш ход!")
-    else:
+    if now == user_name:
         if city[0] != games[game_id]["last_char"] and len(games[game_id]["cities"]) != 0:
             bot.send_message(message.chat.id,
                              f"Назвние города должно начинаться на {games[game_id]["last_char"].upper()}")
 
-        elif city in games[game_id]["cities"]:
+        elif is_city_new(games[game_id]["cities"], city):
             bot.send_message(message.chat.id, f"Этот город уже был")
 
             for i in games[game_id]["players"]:
@@ -228,6 +271,8 @@ def playing(message):
                     bot.send_message(tele_id[i], f"Вам на {games[game_id]["last_char"].upper()}")
                 else:
                     bot.send_message(tele_id[i], f"Сейчас очередь {group[games[game_id]["turn"]]}")
+    else:
+        bot.send_message(message.chat.id, "Сейчас не ваш ход!")
 
 
 bot.polling(none_stop=True)
